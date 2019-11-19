@@ -69,7 +69,7 @@ class nodeutility {
             { $psitem -is [DoWhileStatementAst] } { $node = [DoWhileNode]::new($PSItem, $f) }
             { $psitem -is [TryStatementAst] } { $node = [DoWhileNode]::new($PSItem, $f) }
             { $psitem -is [ReturnStatementAst] } { $node = [ReturnKeyWord]::new($PSItem, $f) }
-            { $psitem -is [ExitStatementAst] } { $node = [ExitKeyWord]::new($PSItem, $f) }
+            { $psitem -is [ExitStatementAst] } { $node = [ExitKeyWord]::new($f) }
         
         }
         return $node
@@ -100,6 +100,9 @@ class nodeutility {
             "DoWhile" { $Shape = "parallelogram" }
             "DoUntil" { $Shape = "parallelogram" }
             "For" { $Shape = "parallelogram" }
+            "Try" { $Shape = "invhouse" }
+            "Catch" { $Shape = "invhouse" }
+            "Exit" { $Shape = "ellipse" }
             Defaut { $Shape = "box" }
         
         }
@@ -174,7 +177,7 @@ class node {
                 $node.LinkedBrothers = $LinkedList
                 $node.LinkedNodeId = $LinkedNode
                 $this.Children.add($node)
-                If ( $node.Type -NotIn ("Else", "ElseIf", "SwitchCase", "SwitchDefault")) {
+                If ( $node.Type -NotIn ("Else", "ElseIf", "SwitchCase", "SwitchDefault","Exit")) {
                     $LinkedNodeNext = [System.Collections.Generic.LinkedListNode[string]]::new("End_" + $node.Nodeid)
                     $LinkedList.AddAfter($LinkedNode, $LinkedNodeNext)
                 }
@@ -219,7 +222,7 @@ class node {
                 $node.LinkedBrothers = $LinkedList
                 $node.LinkedNodeId = $LinkedNode
                 $this.Children.add($node)
-                If ( $node.Type -NotIn ("Else", "ElseIf", "SwitchCase", "SwitchDefault")) {
+                If ( $node.Type -NotIn ("Else", "ElseIf", "SwitchCase", "SwitchDefault","Exit")) {
                     $LinkedNodeNext = [System.Collections.Generic.LinkedListNode[string]]::new("End_" + $node.Nodeid)
                     $LinkedList.AddAfter($LinkedNode, $LinkedNodeNext)
                 }
@@ -1242,6 +1245,27 @@ Class TryNode : node {
         $this.Children.add($node)
     }
 
+    Graph ($UseDescription) {
+        ## On stocke le noeud de fin
+        $EndIfNode = $this.LinkedBrothers.Find($this.EndNodeid)
+
+        $string = ""
+        ## si on a pas de previous node, et niveau 0
+        If ( ($this.Depth -eq 1) -And ($null -eq $this.LinkedNodeId.Previous) ) {
+            write-Verbose "Graph: Try: Drawing START NODE"
+            $string = ";Edge -from START -to " + $this.NodeId        
+        }
+
+        ## on cree les bases
+        If ( $UseDescription ) {
+            $string = $string+";node " + $this.Nodeid + " -attributes @{Label='" + $this.Description + "';shape='"+$this.DefaultShape+"'}"    
+        } Else {
+            $string = $string+";node " + $this.Nodeid + " -attributes @{Label='" + ($this.Statement -replace "'|""|\*", '') + "';shape='"+$this.DefaultShape+"'}"
+        }
+        $string = $string + ";node " + $this.EndNodeid + " -attributes @{Label='If " + ($this.raw.Condition -replace "'|""|\*", '') + "';shape='diamond'}"
+        $string = $string + ";Edge -from " + $this.EndNodeid + " -to " + $this.nodeId + " -attributes @{Label='True, Loop'}"
+    }
+
 }
 
 Class CatchNode : node {
@@ -1255,14 +1279,37 @@ Class CatchNode : node {
 }
 
 Class ExitKeyWord : node {
-    [string]$Type = "ExitKeyWord"
+    [string]$Type = "Exit"
 
-    ExitKeyWord ([Ast]$e) : base () {
+    # ExitKeyWord ([Ast]$e) : base () {
+    #     $this.Statement = "ExitKeyWord"
+    # }
+
+    # ExitKeyWord ([Ast]$e, [node]$f) : base($e, $f) {
+    #     $this.Statement = "ExitKeyWord"
+    # }
+
+    ExitKeyWord ($f) : base ($f) {
         $this.Statement = "ExitKeyWord"
     }
 
-    ExitKeyWord ([Ast]$e, [node]$f) : base($e, $f) {
-        $this.Statement = "ExitKeyWord"
+    [string]graph($UseDescription){
+        $string = ""
+        write-Verbose "Graph: ExitKeyWord: Drawing To END"
+        $string = $string +";node " + $this.Nodeid + " -attributes @{Label='Exit';shape='"+$this.DefaultShape+"'}"    
+        $string = $string + ";Edge -from "+$this.Nodeid+" -to END"
+
+        ## OK çA MARCHE PAS PARCEQUE BLOCKPROCESS N A PAS DE PARENT !
+        if ( $null -ne $this.LinkedNodeId.next ) {
+            $NextNode = $this.parent.Children.where({$_.NodeID -eq $this.LinkedNodeId.next.Value})
+            If ( $NextNode.Type -notlike "Else*" ) {
+                Write-Verbose "Graph: ExitKeyWord: the next node is not a else/elseif"
+                $string = $string + ";Edge -from " + $this.NodeId + " -to " + $NextNode.NodeId + " -Attributes @{Style='invis'}"
+            }
+            
+        }
+
+        return $string
     }
 }
 
@@ -1277,8 +1324,6 @@ Class ReturnKeyWord : node {
         $this.Statement = "ReturnKeyWord"
     }
 }
-
-
 function Find-FCNode {
     <#
     .SYNOPSIS
