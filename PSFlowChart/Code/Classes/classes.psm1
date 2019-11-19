@@ -49,6 +49,7 @@ class nodeutility {
             { $psitem -is [ForStatementAst] } { $node = [ForNode]::new($PSItem) }
             { $psitem -is [DoUntilStatementAst] } { $node = [DoUntilNode]::new($PSItem) }
             { $psitem -is [DoWhileStatementAst] } { $node = [DoWhileNode]::new($PSItem) }
+            { $psitem -is [TryStatementAst] } { $node = [TryNode]::new($PSItem) }
         }
         return $node
     }
@@ -77,7 +78,8 @@ class nodeutility {
             [SwitchStatementAst],
             [ForStatementAst],
             [DoUntilStatementAst],
-            [DoWhileStatementAst]
+            [DoWhileStatementAst],
+            [TryStatementAst]
         )
     }
 
@@ -1194,3 +1196,55 @@ Class BlockProcess : node {
     [void]FindDescription([Bool]$Recurse) { }
     [void]FindDescription([Bool]$Recurse, [String]$KeyWord) { }
 }
+
+Class TryNode : node {
+    [string]$Type = "Try"
+
+    TryNode ([Ast]$e) : base($e) {
+        # $e = Raw
+        Write-Verbose "Try : Constructor : 1"
+        $this.Statement = "Try"
+        $this.code = $e.body.extent.Text
+
+        $LinkedList = [System.Collections.Generic.LinkedList[string]]::new()
+        $this.FindChildren($this.raw.Body.Statements, $this, $LinkedList)
+
+        Write-Verbose "Try : Constructor1 : Adding Catch Node"
+        $node = [CatchNode]::new($e.CatchClauses[0], $this)
+        $LinkedNode = [System.Collections.Generic.LinkedListNode[string]]::new($node.Nodeid)
+        $LinkedList.AddLast($LinkedNode)
+        $node.LinkedBrothers = $LinkedList
+        $node.LinkedNodeId = $LinkedNode
+        $this.Children.add($node)
+        
+    }
+
+    TryNode ([Ast]$e, [node]$f) : base($e, $f) {
+        $this.Statement = "Try"
+        $this.code = $e.body.extent.Text
+        
+        $LinkedList = [System.Collections.Generic.LinkedList[string]]::new()
+        $this.FindChildren($this.raw.Body.Statements, $this, $LinkedList)
+
+        Write-Verbose "Try : Constructor1 : Adding Catch Node"
+        $node = [CatchNode]::new($e.CatchClauses[0], $this)
+        $LinkedNode = [System.Collections.Generic.LinkedListNode[string]]::new($node.Nodeid)
+        $LinkedList.AddLast($LinkedNode)
+        $node.LinkedBrothers = $LinkedList
+        $node.LinkedNodeId = $LinkedNode
+        $this.Children.add($node)
+    }
+
+}
+
+Class CatchNode : node {
+    [string]$Type = "Catch"
+
+    CatchNode ([Ast]$e, [node]$f) : base($e, $f) {
+        $this.Statement = "Catch"
+        $this.code = $e.body.extent.Text
+        $this.FindChildren($this.raw.Body.Statements, $this)
+    }
+}
+
+
