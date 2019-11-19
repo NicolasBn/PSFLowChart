@@ -50,6 +50,8 @@ class nodeutility {
             { $psitem -is [DoUntilStatementAst] } { $node = [DoUntilNode]::new($PSItem) }
             { $psitem -is [DoWhileStatementAst] } { $node = [DoWhileNode]::new($PSItem) }
             { $psitem -is [TryStatementAst] } { $node = [TryNode]::new($PSItem) }
+            { $psitem -is [ReturnStatementAst] } { $node = [ReturnKeyWord]::new($PSItem) }
+            { $psitem -is [ExitStatementAst] } { $node = [ExitKeyWord]::new($PSItem) }
         }
         return $node
     }
@@ -65,6 +67,9 @@ class nodeutility {
             { $psitem -is [ForStatementAst] } { $node = [ForNode]::new($PSItem, $f) }
             { $psitem -is [DoUntilStatementAst] } { $node = [DoUntilNode]::new($PSItem, $f) }
             { $psitem -is [DoWhileStatementAst] } { $node = [DoWhileNode]::new($PSItem, $f) }
+            { $psitem -is [TryStatementAst] } { $node = [DoWhileNode]::new($PSItem, $f) }
+            { $psitem -is [ReturnStatementAst] } { $node = [ReturnKeyWord]::new($PSItem, $f) }
+            { $psitem -is [ExitStatementAst] } { $node = [ExitKeyWord]::new($PSItem, $f) }
         
         }
         return $node
@@ -79,7 +84,9 @@ class nodeutility {
             [ForStatementAst],
             [DoUntilStatementAst],
             [DoWhileStatementAst],
-            [TryStatementAst]
+            [TryStatementAst],
+            [ReturnStatementAst],
+            [ExitStatementAst]
         )
     }
 
@@ -1247,4 +1254,26 @@ Class CatchNode : node {
     }
 }
 
+Class ExitKeyWord : node {
+    [string]$Type = "ExitKeyWord"
 
+    ExitKeyWord ([Ast]$e) : base () {
+        $this.Statement = "ExitKeyWord"
+    }
+
+    ExitKeyWord ([Ast]$e, [node]$f) : base($e, $f) {
+        $this.Statement = "ExitKeyWord"
+    }
+}
+
+Class ReturnKeyWord : node {
+    [string]$Type = "ReturnKeyWord"
+
+    ReturnKeyWord ([Ast]$e) : base () {
+        $this.Statement = "ReturnKeyWord"
+    }
+
+    ReturnKeyWord ([Ast]$e, [node]$f) : base($e, $f) {
+        $this.Statement = "ReturnKeyWord"
+    }
+}
