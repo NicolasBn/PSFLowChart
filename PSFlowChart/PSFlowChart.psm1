@@ -491,12 +491,12 @@ Class IfNode : node {
             $LastEdgeTrue = $this.Children.Where{ ($_.type -notin ('ElseIf', 'Else')) } | Select-Object -last 1
 
             If ( $LastEdgeTrue.Type -in ("Foreach", "For", "While", "DoWhile", "DoUntil") ) {
-                ## c'est ici le probleme ...
-                # $string = $string + ";Edge -from " + $LastEdgeTrue.LinkedBrothers.Last.Value + " -to " + $this.EndNodeid + " -attributes @{label='LoopEnded'}"
                 $string = $string + ";Edge -from " + $LastEdgeTrue.EndNodeId + " -to " + $this.EndNodeid + " -attributes @{label='LoopEnded'}"
             }
             Else {
-                $string = $string + ";Edge -from " + $LastEdgeTrue.Endnodeid + " -to " + $this.EndNodeid
+                If ( $LastEdgeTrue.Type -notin ("Exit","Return") ) {
+                    $string = $string + ";Edge -from " + $LastEdgeTrue.Endnodeid + " -to " + $this.EndNodeid
+                }
             }
 
             # $string = $string +";Edge -from "+$LastEdgeTrue.EndnodeId+" -to "+$this.EndNodeid
